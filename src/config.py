@@ -21,7 +21,7 @@ class RevancedConfig(object):
         self.personal_access_token = env.str("PERSONAL_ACCESS_TOKEN", None)
         self.dry_run = env.bool("DRY_RUN", False)
         self.global_cli_dl = env.str("GLOBAL_CLI_DL", default_cli)
-        self.global_patches_dl = env.str("GLOBAL_PATCHES_DL", default_patches)
+        self.global_patches_dl = self.get_patch_dls("GLOBAL", [default_patches])
         self.global_keystore_name = env.str("GLOBAL_KEYSTORE_FILE_NAME", "revanced.keystore")
         self.global_options_file = env.str("GLOBAL_OPTIONS_FILE", "options.json")
         self.global_archs_to_build = env.list("GLOBAL_ARCHS_TO_BUILD", [])
@@ -31,3 +31,19 @@ class RevancedConfig(object):
         self.apps = env.list("PATCH_APPS", default_build)
         self.global_old_key = env.bool("GLOBAL_OLD_KEY", True)
         self.global_space_formatted = env.bool("GLOBAL_SPACE_FORMATTED_PATCHES", True)
+
+    def get_patch_dls(self: Self, prefix: str, default: list[str]) -> list[str]:
+        """Set the patch dls for a given prefix."""
+        patches_dl = list(
+            filter(
+                lambda item: item,
+                [item.strip() for item in self.env.list(f"{prefix}_PATCHES_DL".upper(), default, delimiter="|")],
+            ),
+        )
+        # Remove duplicates
+        for index, item in enumerate(patches_dl):
+            for i in range(index + 1, len(patches_dl)):
+                if item == patches_dl[i]:
+                    patches_dl.pop(i)
+        self.env._values[f"{prefix}_PATCHES_DL"] = patches_dl  # noqa: SLF001
+        return patches_dl

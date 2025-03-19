@@ -31,10 +31,10 @@ class APP(object):
         self.app_version = config.env.str(f"{app_name}_VERSION".upper(), None)
         self.experiment = False
         self.cli_dl = config.env.str(f"{app_name}_CLI_DL".upper(), config.global_cli_dl)
-        self.patches_dl = config.env.str(f"{app_name}_PATCHES_DL".upper(), config.global_patches_dl)
+        self.patches_dl: list[str] = config.get_patch_dls(f"{app_name}", config.global_patches_dl)
         self.exclude_request: list[str] = config.env.list(f"{app_name}_EXCLUDE_PATCH".upper(), [])
         self.include_request: list[str] = config.env.list(f"{app_name}_INCLUDE_PATCH".upper(), [])
-        self.resource: dict[str, dict[str, str]] = {}
+        self.resource: dict[str, dict[str, str] | list[dict[str, str]]] = {}
         self.no_of_patches: int = 0
         self.keystore_name = config.env.str(f"{app_name}_KEYSTORE_FILE_NAME".upper(), config.global_keystore_name)
         self.archs_to_build = config.env.list(f"{app_name}_ARCHS_TO_BUILD".upper(), config.global_archs_to_build)
@@ -81,7 +81,7 @@ class APP(object):
         """
         current_date = datetime.now(timezone(time_zone))
         formatted_date = current_date.strftime("%Y%b%d.%I%M%p").upper()
-        return f"Re{self.app_name}-Version{slugify(self.app_version)}-PatchVersion{slugify(self.resource["patches"]["version"])}-{formatted_date}-output.apk"  # noqa: E501
+        return f"Re{self.app_name}-Version{slugify(self.app_version)}-PatchVersion{slugify(self.resource['patches'][0]['version'])}-{formatted_date}-output.apk"  # noqa: E501
 
     def __str__(self: "APP") -> str:
         """Returns the str representation of the app."""
@@ -148,24 +148,31 @@ class APP(object):
         # Create a list of resource download tasks
         download_tasks = [
             ("cli", self.cli_dl, config, ".*jar"),
-            ("patches", self.patches_dl, config, ".*rvp"),
         ]
+        patches_download_tasks = [("patches", patches_dl, config, ".*rvp") for patches_dl in self.patches_dl]
+        download_tasks.extend(patches_download_tasks)
+        self.resource["patches"] = []
 
         # Using a ThreadPoolExecutor for parallelism
         with ThreadPoolExecutor(1) as executor:
-            futures = {resource_name: executor.submit(self.download, *args) for resource_name, *args in download_tasks}
+            futures = [
+                (resource_name, executor.submit(self.download, *args)) for resource_name, *args in download_tasks
+            ]
 
             # Wait for all tasks to complete
-            concurrent.futures.wait(futures.values())
+            concurrent.futures.wait([future for _, future in futures])
 
             # Retrieve results from completed tasks
-            for resource_name, future in futures.items():
+            for resource_name, future in futures:
                 try:
                     tag, file_name = future.result()
-                    self.resource[resource_name] = {
-                        "file_name": file_name,
-                        "version": tag,
-                    }
+                    if resource_name == "patches":
+                        self.resource["patches"].append({"file_name": file_name, "version": tag})
+                    else:
+                        self.resource[resource_name] = {
+                            "file_name": file_name,
+                            "version": tag,
+                        }
                 except BuilderError as e:
                     msg = "Failed to download resource."
                     raise PatchingFailedError(msg) from e

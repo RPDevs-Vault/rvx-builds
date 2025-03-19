@@ -124,24 +124,34 @@ class Patches(object):
             The `app` parameter is of type `APP`. It represents an instance of the `APP` class.
         """
         self.patches_dict[app.app_name] = []
-        patches = convert_command_output_to_json(
-            f"{config.temp_folder}/{app.resource["cli"]["file_name"]}",
-            f"{config.temp_folder}/{app.resource["patches"]["file_name"]}",
-        )
+        all_patches = []
+        cli_rs = app.resource["cli"]
+        for patches_rs in app.resource["patches"]:
+            if not isinstance(patches_rs, dict):
+                msg = "app.resource['patches'] should be a list of dict[str, str]"
+                raise TypeError(msg)
+            patches = convert_command_output_to_json(
+                f"{config.temp_folder}/{cli_rs['file_name']}",  # type: ignore  # noqa: PGH003
+                f"{config.temp_folder}/{patches_rs['file_name']}",
+            )
+            all_patches.append(patches)
 
-        for patch in patches:
-            if not patch["compatiblePackages"]:
-                p = {x: patch[x] for x in ["name", "description"]}
-                p["app"] = "universal"
-                p["version"] = "all"
-                self.patches_dict["universal_patch"].append(p)
-            else:
-                for compatible_package, version in [(x["name"], x["versions"]) for x in patch["compatiblePackages"]]:
-                    if app.package_name == compatible_package:
-                        p = {x: patch[x] for x in ["name", "description"]}
-                        p["app"] = compatible_package
-                        p["version"] = version[-1] if version else "all"
-                        self.patches_dict[app.app_name].append(p)
+        for patches in all_patches:
+            for patch in patches:
+                if not patch["compatiblePackages"]:
+                    p = {x: patch[x] for x in ["name", "description"]}
+                    p["app"] = "universal"
+                    p["version"] = "all"
+                    self.patches_dict["universal_patch"].append(p)
+                else:
+                    for compatible_package, version in [
+                        (x["name"], x["versions"]) for x in patch["compatiblePackages"]
+                    ]:
+                        if app.package_name == compatible_package:
+                            p = {x: patch[x] for x in ["name", "description"]}
+                            p["app"] = compatible_package
+                            p["version"] = version[-1] if version else "all"
+                            self.patches_dict[app.app_name].append(p)
 
         app.no_of_patches = len(self.patches_dict[app.app_name])
 

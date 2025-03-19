@@ -23,7 +23,7 @@ class GitHubManager(ReleaseManager):
             updates_file=updates_file,
         )
 
-    def get_last_version(self: Self, app: APP, resource_name: str) -> str:
+    def get_last_version(self: Self, app: APP, resource_name: str) -> str | list[str]:
         """Get last patched version."""
         if os.getenv("DRY_RUN", default=None):
             with Path(updates_file).open() as url:
@@ -32,7 +32,10 @@ class GitHubManager(ReleaseManager):
             with urllib.request.urlopen(self.update_file_url) as url:
                 data = json.load(url)
         if data.get(app.app_name):
-            return str(data[app.app_name][resource_name])
+            resource = data[app.app_name][resource_name]
+            if isinstance(resource, list):
+                return resource
+            return str(resource)
         return "0"
 
     def get_last_version_source(self: Self, app: APP, resource_name: str) -> str:
