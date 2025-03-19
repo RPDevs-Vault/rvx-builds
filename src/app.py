@@ -166,6 +166,8 @@ class APP(object):
             for resource_name, future in futures:
                 try:
                     tag, file_name = future.result()
+                    logger.debug(f"{resource_name}")
+                    logger.debug(f"{tag} {file_name}")
                     if resource_name == "patches":
                         self.resource["patches"].append({"file_name": file_name, "version": tag})
                     else:
