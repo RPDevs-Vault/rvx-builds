@@ -23,7 +23,7 @@ def get_app(config: RevancedConfig, app_name: str) -> APP:
 
 def main() -> None:
     """Entry point."""
-    env = Env()
+    env = Env(expand_vars=True)
     env.read_env()
     config = RevancedConfig(env)
     updates_info = {}
