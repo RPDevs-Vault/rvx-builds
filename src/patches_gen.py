@@ -19,8 +19,14 @@ def convert_command_output_to_json(
     """
 
     def run_command_and_capture_output(patches_command: list[str]) -> Any:
-        result = subprocess.run(patches_command, capture_output=True, text=True, check=True)
-        return result.stdout
+        # result = subprocess.run(patches_command, capture_output=True, text=True, check=True)
+        try:
+            r = subprocess.check_output(patches_command, text=True)
+            print(r)
+        except subprocess.CalledProcessError as e:
+            print(e.output)
+            raise
+        return r
 
     def parse_text_to_json(text: str) -> list[dict[Any, Any]]:
         # Split the data into individual sections based on "Name:"
