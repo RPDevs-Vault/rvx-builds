@@ -22,7 +22,7 @@ def convert_command_output_to_json(
         # result = subprocess.run(patches_command, capture_output=True, text=True, check=True)
         try:
             r = subprocess.check_output(patches_command, text=True)
-            print(r)
+            # print(r)
         except subprocess.CalledProcessError as e:
             print(e.output)
             raise
