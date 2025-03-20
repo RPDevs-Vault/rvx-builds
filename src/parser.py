@@ -209,7 +209,7 @@ class Parser(object):
         """
         apk_arg = self.NEW_APK_ARG
         exp = "--force"
-        _patch_args = [(self.PATCHES_ARG, patches_rs["file_name"]) for patches_rs in app.resource["patches"]]
+        _patch_args = [(self.PATCHES_ARG, str(patches_rs["file_name"])) for patches_rs in app.resource["patches"]]
         patch_args = [arg for pair in _patch_args for arg in pair]
         args = [
             self.CLI_JAR,
