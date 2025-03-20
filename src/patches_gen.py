@@ -5,6 +5,8 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
+from loguru import logger
+
 
 def convert_command_output_to_json(
     jar_file_name: str,
@@ -22,9 +24,9 @@ def convert_command_output_to_json(
         # result = subprocess.run(patches_command, capture_output=True, text=True, check=True)
         try:
             r = subprocess.check_output(patches_command, text=True)
-            # print(r)
+            logger.debug(f"Command ran successfully \n{r}")
         except subprocess.CalledProcessError as e:
-            print(e.output)
+            logger.debug(f"Error: \n{e.output}")
             raise
         return r
 
